@@ -1,0 +1,141 @@
+import glfw 
+import math
+from OpenGL.GL import *
+from OpenGL.GLUT import *
+from OpenGL.GLU import *
+
+# Variáveis globais para as posições das "motos"
+x1_posicao = -0.5
+y1_posicao = 0.0
+x2_posicao = 0.5
+y2_posicao = 0.0
+window = None  # Variável global para a janela
+
+# Função de callback para o teclado
+def key_callback(window, key, scancode, action, mods):
+    global x1_posicao, y1_posicao, x2_posicao, y2_posicao
+    step_size = 0.1
+    if action == glfw.PRESS:
+        if key == glfw.KEY_UP:
+            y2_posicao += step_size  # Move a segunda "moto" para cima
+        elif key == glfw.KEY_DOWN:
+            y2_posicao -= step_size  # Move a segunda "moto" para baixo
+        elif key == glfw.KEY_LEFT:
+            x2_posicao -= step_size  # Move a segunda "moto" para a esquerda
+        elif key == glfw.KEY_RIGHT:
+            x2_posicao += step_size  # Move a segunda "moto" para a direita
+        elif key == glfw.KEY_W:
+            y1_posicao += step_size  # Move a primeira "moto" para cima
+        elif key == glfw.KEY_S:
+            y1_posicao -= step_size  # Move a primeira "moto" para baixo
+        elif key == glfw.KEY_A:
+            x1_posicao -= step_size  # Move a primeira "moto" para a esquerda
+        elif key == glfw.KEY_D:
+            x1_posicao += step_size  # Move a primeira "moto" para a direita
+
+# Função para desenhar uma "moto"
+def draw_moto(x, y, color):
+    glColor3f(*color)
+    
+    # Corpo da moto
+    glBegin(GL_QUADS)
+    glVertex2f(x - 0.05, y - 0.05)
+    glVertex2f(x + 0.05, y - 0.05)
+    glVertex2f(x + 0.05, y + 0.1)
+    glVertex2f(x - 0.05, y + 0.1)
+    glEnd()
+    
+    # Rodas
+    glColor3f(0.0, 0.0, 0.0)  # Cor preta para as rodas
+    glBegin(GL_POLYGON)
+    for i in range(360):
+        angle = i * math.pi / 180
+        x_wheel = x - 0.05 + 0.08 * math.cos(angle)  # Posição x da roda
+        y_wheel = y - 0.05 + 0.08 * math.sin(angle)  # Posição y da roda
+        glVertex2f(x_wheel, y_wheel)
+    glEnd()
+
+    glBegin(GL_POLYGON)
+    for i in range(360):
+        angle = i * math.pi / 180
+        x_wheel = x + 0.05 + 0.08 * math.cos(angle)  # Posição x da roda
+        y_wheel = y - 0.05 + 0.08 * math.sin(angle)  # Posição y da roda
+        glVertex2f(x_wheel, y_wheel)
+    glEnd()
+
+# Função para desenhar a pista de corrida com curvas
+def draw_track():
+    # Cor cinza para a pista
+    glColor3f(0.3, 0.3, 0.3)
+    glBegin(GL_QUADS)
+    glVertex2f(-1.0, -0.3)
+    glVertex2f(1.0, -0.3)
+    glVertex2f(1.0, -1.0)
+    glVertex2f(-1.0, -1.0)
+    glEnd()
+
+    # Desenha a curva superior (esquerda)
+    glColor3f(0.3, 0.3, 0.3)
+    glBegin(GL_QUADS)
+    glVertex2f(-1.0, -0.3)
+    glVertex2f(-0.8, -0.3)
+    glVertex2f(-0.8, -0.5)
+    glVertex2f(-1.0, -0.5)
+    glEnd()
+
+    # Desenha a curva inferior (direita)
+    glBegin(GL_QUADS)
+    glVertex2f(0.8, -0.3)
+    glVertex2f(1.0, -0.3)
+    glVertex2f(1.0, -0.5)
+    glVertex2f(0.8, -0.5)
+    glEnd()
+
+      # Linha de chegada (cor branca) no final da pista
+    glLineWidth(3.0)  # Aumenta a espessura da linha
+    glColor3f(1.0, 1.0, 1.0)
+    glBegin(GL_LINES)
+    glVertex2f(-1.0, -1.0)  # Início da linha de chegada
+    glVertex2f(1.0, -1.0)   # Fim da linha de chegada
+    glEnd()
+    glLineWidth(1.0)  # Restaura a espessura padrão
+
+# Função para desenhar na tela
+def draw():
+    glClear(GL_COLOR_BUFFER_BIT)
+    glClearColor(0.5, 0.5,0.5, 1.0)  # Cor de fundo cinza
+    glLoadIdentity()
+    draw_track()  # Desenhar a pista de corrida
+    draw_moto(x1_posicao, y1_posicao, (1.0, 0.0, 0.0))  # Primeira "moto" em vermelho
+    draw_moto(x2_posicao, y2_posicao, (0.0, 0.0, 1.0))  # Segunda "moto" em azul
+    glfw.swap_buffers(window)
+
+# Função principal
+def main():
+    global window
+    if not glfw.init():
+        return
+
+    window = glfw.create_window(800, 600, "Teclado", None, None)
+    if not window:
+        glfw.terminate()
+        return
+
+    glfw.make_context_current(window)
+    glfw.set_key_callback(window, key_callback)
+
+    glMatrixMode(GL_PROJECTION)
+    glLoadIdentity()
+    gluOrtho2D(-1, 1, -1, 1)
+    glMatrixMode(GL_MODELVIEW)
+    glLoadIdentity()
+
+    while not glfw.window_should_close(window):
+        glfw.poll_events()
+        draw()
+
+    glfw.terminate()
+
+if __name__ == "__main__":
+
+    main()
