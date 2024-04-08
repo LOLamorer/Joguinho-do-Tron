@@ -4,87 +4,90 @@ from OpenGL.GL import *
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
 
-# Variáveis globais para as posições das "motos"
-# Essa parte do código define variáveis globais para armazenar as posições das "motos" e cria uma variável global para a janela.
-#x1_posicao`, `y1_posicao`: representam as coordenadas x e y da primeira "moto".
-#`x2_posicao`, `y2_posicao`: representam as coordenadas x e y da segunda "moto".
-#window`: é uma variável que armazenará a referência para a janela criada usando o GLFW.
-
-#Essas variáveis globais são utilizadas em todo o programa para manter o estado das posições das motos e da janela, 
-#facilitando o acesso e a modificação desses valores em diferentes partes do código.
-
 x1_posicao = -0.5
 y1_posicao = 0.0
 x2_posicao = 0.5
 y2_posicao = 0.0
-window = None  # Variável global para a janela
+window = None
 
-# Função de callback para o teclado/para lidar com eventos de teclado. 
-def key_callback(window, key, scancode, action, mods): #define a função/ window: A janela do GLFW que gerou o evento de teclado.
-    #key: A tecla do teclado pressionada ou liberada.
-#scancode: O código do scancode da tecla.
-#action: A ação do evento, como PRESS (pressionado) ou RELEASE (liberado).
-#mods: Modificadores do teclado pressionados, como Shift, Ctrl, Alt.
+keys_pressed = set()  # Armazena as teclas pressionadas
 
+# Listas para armazenar os rastros das motos
+rastro_moto1 = []
+rastro_moto2 = []
+
+
+def key_callback(window, key, scancode, action, mods):
+    global keys_pressed
+    if action == glfw.PRESS:
+        keys_pressed.add(key)  # Adiciona a tecla pressionada ao conjunto
+    elif action == glfw.RELEASE:
+        if key in keys_pressed:
+            keys_pressed.remove(key)  # Remove a tecla liberada do conjunto
+
+
+def update_positions():
     global x1_posicao, y1_posicao, x2_posicao, y2_posicao
-    step_size = 0.1 # Define o tamanho do passo para o movimento da moto.
-    if action == glfw.PRESS: #A função verifica se uma tecla foi pressionada (action == glfw.PRESS) 
-        #e, em seguida, verifica qual tecla foi pressionada utilizando a variável key
-        if key == glfw.KEY_UP:
-            y2_posicao += step_size  # Move a segunda "moto" para cima
-        elif key == glfw.KEY_DOWN:
-            y2_posicao -= step_size  # Move a segunda "moto" para baixo
-        elif key == glfw.KEY_LEFT:
-            x2_posicao -= step_size  # Move a segunda "moto" para a esquerda
-        elif key == glfw.KEY_RIGHT:
-            x2_posicao += step_size  # Move a segunda "moto" para a direita
-        elif key == glfw.KEY_W:
-            y1_posicao += step_size  # Move a primeira "moto" para cima
-        elif key == glfw.KEY_S:
-            y1_posicao -= step_size  # Move a primeira "moto" para baixo
-        elif key == glfw.KEY_A:
-            x1_posicao -= step_size  # Move a primeira "moto" para a esquerda
-        elif key == glfw.KEY_D:
-            x1_posicao += step_size  # Move a primeira "moto" para a direita
+    step_size = 0.03  # Reduzindo a velocidade
 
-# Função para desenhar uma "moto"/Essa função draw_moto(x, y, color) 
-# é responsável por desenhar uma "moto" na tela com base em suas coordenadas (x, y) e uma cor específica.
-# / sendo x = coordenada da moto e y coordenada da posição da moto
+    for key in keys_pressed:
+        if key == glfw.KEY_UP:
+            y2_posicao += step_size
+        elif key == glfw.KEY_DOWN:
+            y2_posicao -= step_size
+        elif key == glfw.KEY_LEFT:
+            x2_posicao -= step_size
+        elif key == glfw.KEY_RIGHT:
+            x2_posicao += step_size
+        elif key == glfw.KEY_W:
+            y1_posicao += step_size
+        elif key == glfw.KEY_S:
+            y1_posicao -= step_size
+        elif key == glfw.KEY_A:
+            x1_posicao -= step_size
+        elif key == glfw.KEY_D:
+            x1_posicao += step_size
+
+    # Adiciona a posição atual à lista de rastros
+    rastro_moto1.append((x1_posicao, y1_posicao))
+    rastro_moto2.append((x2_posicao, y2_posicao))
+
+
 def draw_moto(x, y, color):
     glColor3f(*color)
-    
-    # Corpo da moto (triângulo diagonal)
     glBegin(GL_TRIANGLES)
-    glVertex2f(x - 0.05, y - 0.05)  # Vértice inferior esquerdo
-    glVertex2f(x + 0.05, y - 0.05)  # Vértice inferior direito
-    glVertex2f(x - 0.05, y + 0.05)  # Vértice superior esquerdo
+    glVertex2f(x - 0.05, y - 0.05)
+    glVertex2f(x + 0.05, y - 0.05)
+    glVertex2f(x - 0.05, y + 0.05)
     glEnd()
-    
-    # Rodas
-    glColor3f(0.0, 0.0, 0.0)  # Cor preta para as rodas
-    
-    # Roda esquerda
+    glColor3f(0.0, 0.0, 0.0)
+
     glBegin(GL_POLYGON)
     for i in range(360):
         angle = i * math.pi / 180
-        x_wheel = x - 0.05 + 0.08 * math.cos(angle)  # Posição x da roda
-        y_wheel = y - 0.05 + 0.08 * math.sin(angle)  # Posição y da roda
+        x_wheel = x - 0.05 + 0.08 * math.cos(angle)
+        y_wheel = y - 0.05 + 0.08 * math.sin(angle)
         glVertex2f(x_wheel, y_wheel)
     glEnd()
 
-    # Roda direita
     glBegin(GL_POLYGON)
     for i in range(360):
         angle = i * math.pi / 180
-        x_wheel = x + 0.05 + 0.08 * math.cos(angle)  # Posição x da roda
-        y_wheel = y - 0.05 + 0.08 * math.sin(angle)  # Posição y da roda
+        x_wheel = x + 0.05 + 0.08 * math.cos(angle)
+        y_wheel = y - 0.05 + 0.08 * math.sin(angle)
         glVertex2f(x_wheel, y_wheel)
     glEnd()
 
 
-# Função para desenhar a pista de corrida com curvas
+def draw_rastro(rastro):
+    glColor3f(0.8, 0.8, 0.8)
+    glBegin(GL_LINE_STRIP)
+    for posicao in rastro:
+        glVertex2f(posicao[0], posicao[1])
+    glEnd()
+
+
 def draw_track():
-    # Cor cinza para a pista
     glColor3f(0.3, 0.3, 0.3)
     glBegin(GL_QUADS)
     glVertex2f(-1.0, -0.3)
@@ -93,7 +96,6 @@ def draw_track():
     glVertex2f(-1.0, -1.0)
     glEnd()
 
-    # Desenha a curva superior (esquerda)
     glColor3f(0.3, 0.3, 0.3)
     glBegin(GL_QUADS)
     glVertex2f(-1.0, -0.3)
@@ -102,7 +104,6 @@ def draw_track():
     glVertex2f(-1.0, -0.5)
     glEnd()
 
-    # Desenha a curva inferior (direita)
     glBegin(GL_QUADS)
     glVertex2f(0.8, -0.3)
     glVertex2f(1.0, -0.3)
@@ -110,26 +111,27 @@ def draw_track():
     glVertex2f(0.8, -0.5)
     glEnd()
 
-      # Linha de chegada (cor branca) no final da pista
-    glLineWidth(3.0)  # Aumenta a espessura da linha
+    glLineWidth(3.0)
     glColor3f(1.0, 1.0, 1.0)
     glBegin(GL_LINES)
-    glVertex2f(-1.0, -1.0)  # Início da linha de chegada
-    glVertex2f(1.0, -1.0)   # Fim da linha de chegada
+    glVertex2f(-1.0, -1.0)
+    glVertex2f(1.0, -1.0)
     glEnd()
-    glLineWidth(1.0)  # Restaura a espessura padrão
+    glLineWidth(1.0)
 
-# Função para desenhar na tela
+
 def draw():
     glClear(GL_COLOR_BUFFER_BIT)
-    glClearColor(0.5, 0.5,0.5, 1.0)  # Cor de fundo cinza
+    glClearColor(0.5, 0.5, 0.5, 1.0)
     glLoadIdentity()
-    draw_track()  # Desenhar a pista de corrida
-    draw_moto(x1_posicao, y1_posicao, (1.0, 0.0, 0.0))  # Primeira "moto" em vermelho
-    draw_moto(x2_posicao, y2_posicao, (0.0, 0.0, 1.0))  # Segunda "moto" em azul
+    draw_track()
+    draw_rastro(rastro_moto1)
+    draw_rastro(rastro_moto2)
+    draw_moto(x1_posicao, y1_posicao, (1.0, 0.0, 0.0))
+    draw_moto(x2_posicao, y2_posicao, (0.0, 0.0, 1.0))
     glfw.swap_buffers(window)
 
-# Função principal
+
 def main():
     global window
     if not glfw.init():
@@ -151,10 +153,11 @@ def main():
 
     while not glfw.window_should_close(window):
         glfw.poll_events()
+        update_positions()  # Atualiza as posições das motos
         draw()
 
     glfw.terminate()
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     main()
