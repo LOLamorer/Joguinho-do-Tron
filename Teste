@@ -1,21 +1,35 @@
-import glfw 
+import glfw
 import math
 from OpenGL.GL import *
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
 
 # Variáveis globais para as posições das "motos"
+# Essa parte do código define variáveis globais para armazenar as posições das "motos" e cria uma variável global para a janela.
+#x1_posicao`, `y1_posicao`: representam as coordenadas x e y da primeira "moto".
+#`x2_posicao`, `y2_posicao`: representam as coordenadas x e y da segunda "moto".
+#window`: é uma variável que armazenará a referência para a janela criada usando o GLFW.
+
+#Essas variáveis globais são utilizadas em todo o programa para manter o estado das posições das motos e da janela, 
+#facilitando o acesso e a modificação desses valores em diferentes partes do código.
+
 x1_posicao = -0.5
 y1_posicao = 0.0
 x2_posicao = 0.5
 y2_posicao = 0.0
 window = None  # Variável global para a janela
 
-# Função de callback para o teclado
-def key_callback(window, key, scancode, action, mods):
+# Função de callback para o teclado/para lidar com eventos de teclado. 
+def key_callback(window, key, scancode, action, mods): #define a função/ window: A janela do GLFW que gerou o evento de teclado.
+    #key: A tecla do teclado pressionada ou liberada.
+#scancode: O código do scancode da tecla.
+#action: A ação do evento, como PRESS (pressionado) ou RELEASE (liberado).
+#mods: Modificadores do teclado pressionados, como Shift, Ctrl, Alt.
+
     global x1_posicao, y1_posicao, x2_posicao, y2_posicao
-    step_size = 0.1
-    if action == glfw.PRESS:
+    step_size = 0.1 # Define o tamanho do passo para o movimento da moto.
+    if action == glfw.PRESS: #A função verifica se uma tecla foi pressionada (action == glfw.PRESS) 
+        #e, em seguida, verifica qual tecla foi pressionada utilizando a variável key
         if key == glfw.KEY_UP:
             y2_posicao += step_size  # Move a segunda "moto" para cima
         elif key == glfw.KEY_DOWN:
@@ -33,20 +47,23 @@ def key_callback(window, key, scancode, action, mods):
         elif key == glfw.KEY_D:
             x1_posicao += step_size  # Move a primeira "moto" para a direita
 
-# Função para desenhar uma "moto"
+# Função para desenhar uma "moto"/Essa função draw_moto(x, y, color) 
+# é responsável por desenhar uma "moto" na tela com base em suas coordenadas (x, y) e uma cor específica.
+# / sendo x = coordenada da moto e y coordenada da posição da moto
 def draw_moto(x, y, color):
     glColor3f(*color)
     
-    # Corpo da moto
-    glBegin(GL_QUADS)
-    glVertex2f(x - 0.05, y - 0.05)
-    glVertex2f(x + 0.05, y - 0.05)
-    glVertex2f(x + 0.05, y + 0.1)
-    glVertex2f(x - 0.05, y + 0.1)
+    # Corpo da moto (triângulo diagonal)
+    glBegin(GL_TRIANGLES)
+    glVertex2f(x - 0.05, y - 0.05)  # Vértice inferior esquerdo
+    glVertex2f(x + 0.05, y - 0.05)  # Vértice inferior direito
+    glVertex2f(x - 0.05, y + 0.05)  # Vértice superior esquerdo
     glEnd()
     
     # Rodas
     glColor3f(0.0, 0.0, 0.0)  # Cor preta para as rodas
+    
+    # Roda esquerda
     glBegin(GL_POLYGON)
     for i in range(360):
         angle = i * math.pi / 180
@@ -55,6 +72,7 @@ def draw_moto(x, y, color):
         glVertex2f(x_wheel, y_wheel)
     glEnd()
 
+    # Roda direita
     glBegin(GL_POLYGON)
     for i in range(360):
         angle = i * math.pi / 180
@@ -62,6 +80,7 @@ def draw_moto(x, y, color):
         y_wheel = y - 0.05 + 0.08 * math.sin(angle)  # Posição y da roda
         glVertex2f(x_wheel, y_wheel)
     glEnd()
+
 
 # Função para desenhar a pista de corrida com curvas
 def draw_track():
