@@ -12,26 +12,29 @@ y2_posicao = 0.0
 window = None  # Variável global para a janela
 speed = 0.05  # Velocidade dos carrinhos
 
+keys_pressed = set()  # Armazena as teclas pressionadas
+
+# Listas para armazenar os rastros das motos
+rastro_moto1 = []
+rastro_moto2 = []
+
+rastro_size = 50  # Tamanho máximo do rastro
+rastro_decay_rate = 0.1  # Taxa de decaimento do rastro
+
+# Limites da tela
+left_limit = -1.0
+right_limit = 1.0
+bottom_limit = -1.0
+top_limit = 1.0
+
 # Função de callback para o teclado
 def key_callback(window, key, scancode, action, mods):
-    global x1_posicao, y1_posicao, x2_posicao, y2_posicao, speed
+    global x1_posicao, y1_posicao, x2_posicao, y2_posicao, speed, keys_pressed
     if action == glfw.PRESS:
-        if key == glfw.KEY_UP:
-            y2_posicao += speed  # Move o segundo "carrinho" para cima
-        elif key == glfw.KEY_DOWN:
-            y2_posicao -= speed  # Move o segundo "carrinho" para baixo
-        elif key == glfw.KEY_LEFT:
-            x2_posicao -= speed  # Move o segundo "carrinho" para a esquerda
-        elif key == glfw.KEY_RIGHT:
-            x2_posicao += speed  # Move o segundo "carrinho" para a direita
-        elif key == glfw.KEY_W:
-            y1_posicao += speed  # Move o primeiro "carrinho" para cima
-        elif key == glfw.KEY_S:
-            y1_posicao -= speed  # Move o primeiro "carrinho" para baixo
-        elif key == glfw.KEY_A:
-            x1_posicao -= speed  # Move o primeiro "carrinho" para a esquerda
-        elif key == glfw.KEY_D:
-            x1_posicao += speed  # Move o primeiro "carrinho" para a direita
+        keys_pressed.add(key)  # Adiciona a tecla pressionada ao conjunto
+    elif action == glfw.RELEASE:
+        if key in keys_pressed:
+            keys_pressed.remove(key)  # Remove a tecla liberada do conjunto
 
 # Função para desenhar um "carrinho"
 def draw_car(x, y, color):
@@ -69,47 +72,114 @@ def draw_track():
     # Cor cinza para a pista
     glColor3f(0.3, 0.3, 0.3)
     glBegin(GL_QUADS)
-    glVertex2f(-1.0, -0.3)
-    glVertex2f(1.0, -0.3)
-    glVertex2f(1.0, -1.0)
-    glVertex2f(-1.0, -1.0)
+    glVertex2f(left_limit, bottom_limit)
+    glVertex2f(right_limit, bottom_limit)
+    glVertex2f(right_limit, top_limit)
+    glVertex2f(left_limit, top_limit)
     glEnd()
 
     # Desenha a curva superior (esquerda)
     glColor3f(0.3, 0.3, 0.3)
     glBegin(GL_QUADS)
-    glVertex2f(-1.0, -0.3)
-    glVertex2f(-0.8, -0.3)
-    glVertex2f(-0.8, -0.5)
-    glVertex2f(-1.0, -0.5)
+    glVertex2f(left_limit, bottom_limit)
+    glVertex2f(left_limit + 0.2, bottom_limit)
+    glVertex2f(left_limit + 0.2, bottom_limit - 0.2)
+    glVertex2f(left_limit, bottom_limit - 0.2)
     glEnd()
 
     # Desenha a curva inferior (direita)
     glBegin(GL_QUADS)
-    glVertex2f(0.8, -0.3)
-    glVertex2f(1.0, -0.3)
-    glVertex2f(1.0, -0.5)
-    glVertex2f(0.8, -0.5)
+    glVertex2f(right_limit - 0.2, bottom_limit)
+    glVertex2f(right_limit, bottom_limit)
+    glVertex2f(right_limit, bottom_limit - 0.2)
+    glVertex2f(right_limit - 0.2, bottom_limit - 0.2)
     glEnd()
 
-      # Linha de chegada (cor branca) no final da pista
+    # Linha de chegada (cor branca) no final da pista
     glLineWidth(3.0)  # Aumenta a espessura da linha
     glColor3f(1.0, 1.0, 1.0)
     glBegin(GL_LINES)
-    glVertex2f(-1.0, -1.0)  # Início da linha de chegada
-    glVertex2f(1.0, -1.0)   # Fim da linha de chegada
+    glVertex2f(left_limit, top_limit)  # Início da linha de chegada
+    glVertex2f(right_limit, top_limit)   # Fim da linha de chegada
     glEnd()
     glLineWidth(1.0)  # Restaura a espessura padrão
 
 # Função para desenhar na tela
 def draw():
+    global rastro_moto1, rastro_moto2
     glClear(GL_COLOR_BUFFER_BIT)
     glClearColor(0.2, 0.3,0.8, 1.0)  # Cor de fundo cinza
     glLoadIdentity()
     draw_track()  # Desenhar a pista de corrida
     draw_car(x1_posicao, y1_posicao, (1.0, 0.0, 0.0))  # Primeiro "carrinho" em vermelho
     draw_car(x2_posicao, y2_posicao, (0.0, 0.0, 1.0))  # Segundo "carrinho" em azul
+
+    # Desenhar os rastros
+    draw_rastro(rastro_moto1)
+    draw_rastro(rastro_moto2)
+
     glfw.swap_buffers(window)
+
+# Função para atualizar as posições dos "carrinhos" e rastros
+def update_positions():
+    global x1_posicao, y1_posicao, x2_posicao, y2_posicao, keys_pressed
+
+    step_size = 0.03  # Reduzindo a velocidade
+
+    for key in keys_pressed:
+        if key == glfw.KEY_UP:
+            y2_posicao += speed if y2_posicao + speed <= top_limit else 0  # Move o segundo "carrinho" para cima
+        elif key == glfw.KEY_DOWN:
+            y2_posicao -= speed if y2_posicao - speed >= bottom_limit else 0  # Move o segundo "carrinho" para baixo
+        elif key == glfw.KEY_LEFT:
+            x2_posicao -= speed if x2_posicao - speed >= left_limit else 0  # Move o segundo "carrinho" para a esquerda
+        elif key == glfw.KEY_RIGHT:
+            x2_posicao += speed if x2_posicao + speed <= right_limit else 0  # Move o segundo "carrinho" para a direita
+        elif key == glfw.KEY_W:
+            y1_posicao += speed if y1_posicao + speed <= top_limit else 0  # Move o primeiro "carrinho" para cima
+        elif key == glfw.KEY_S:
+            y1_posicao -= speed if y1_posicao - speed >= bottom_limit else 0  # Move o primeiro "carrinho" para baixo
+        elif key == glfw.KEY_A:
+            x1_posicao -= speed if x1_posicao - speed >= left_limit else 0  # Move o primeiro "carrinho" para a esquerda
+        elif key == glfw.KEY_D:
+            x1_posicao += speed if x1_posicao + speed <= right_limit else 0  # Move o primeiro "carrinho" para a direita
+
+    # Adiciona a posição atual à lista de rastros
+    rastro_moto1.append((x1_posicao, y1_posicao))
+    rastro_moto2.append((x2_posicao, y2_posicao))
+
+    # Limita o tamanho do rastro
+    if len(rastro_moto1) > rastro_size:
+        rastro_moto1.pop(0)
+    if len(rastro_moto2) > rastro_size:
+        rastro_moto2.pop(0)
+
+# Função para desenhar o rastro
+def draw_rastro(rastro):
+    glColor3f(0.8, 0.8, 0.8)
+    glBegin(GL_LINE_STRIP)
+    decay_rate = 1.0
+    for i, posicao in enumerate(rastro):
+        glVertex2f(posicao[0], posicao[1])
+        # Aplica decaimento ao rastro
+        decay_rate -= rastro_decay_rate / rastro_size
+        glColor3f(0.8 * decay_rate, 0.8 * decay_rate, 0.8 * decay_rate)
+    glEnd()
+
+# Função de callback para redimensionamento da janela
+def framebuffer_size_callback(window, width, height):
+    global left_limit, right_limit, bottom_limit, top_limit
+    glViewport(0, 0, width, height)
+    aspect_ratio = width / height
+    left_limit = -aspect_ratio
+    right_limit = aspect_ratio
+    bottom_limit = -1.0
+    top_limit = 1.0
+    glMatrixMode(GL_PROJECTION)
+    glLoadIdentity()
+    gluOrtho2D(left_limit, right_limit, bottom_limit, top_limit)
+    glMatrixMode(GL_MODELVIEW)
+    glLoadIdentity()
 
 # Função principal
 def main():
@@ -124,19 +194,20 @@ def main():
 
     glfw.make_context_current(window)
     glfw.set_key_callback(window, key_callback)
+    glfw.set_framebuffer_size_callback(window, framebuffer_size_callback)
 
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
-    gluOrtho2D(-1, 1, -1, 1)
+    gluOrtho2D(left_limit, right_limit, bottom_limit, top_limit)
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
 
     while not glfw.window_should_close(window):
         glfw.poll_events()
+        update_positions()  # Atualiza as posições das motos
         draw()
 
     glfw.terminate()
 
 if __name__ == "__main__":
-
     main()
