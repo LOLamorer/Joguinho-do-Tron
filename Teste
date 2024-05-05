@@ -9,17 +9,16 @@ x1_posicao = -0.5
 y1_posicao = 0.0
 x2_posicao = 0.5
 y2_posicao = 0.0
-window = None  # Variável global para a janela
-speed = 0.05  # Velocidade dos carrinhos
 
+window = None  # Variável global para a janela
+max_speed = 0.002  # Velocidade máxima dos carrinhos
+min_speed = 0.001  # Velocidade mínima dos carrinhos
+speed = min_speed  # Velocidade inicial dos carrinhos
 keys_pressed = set()  # Armazena as teclas pressionadas
 
 # Listas para armazenar os rastros das motos
 rastro_moto1 = []
 rastro_moto2 = []
-
-rastro_size = 50  # Tamanho máximo do rastro
-rastro_decay_rate = 0.1  # Taxa de decaimento do rastro
 
 # Limites da tela
 left_limit = -1.0
@@ -27,14 +26,80 @@ right_limit = 1.0
 bottom_limit = -1.0
 top_limit = 1.0
 
+# Variável para controlar o estado do jogo
+game_state = "jogando" 
+
+# Variável para controlar a bombinha
+bombinha_visible = False
+bombinha_timer = 120  # Tempo de espera antes de mostrar a bombinha
+bombinha_delay = 120  # Tempo que a bombinha fica visível
+
+# Função para verificar a colisão entre dois carrinhos
+def check_collision(x1, y1, x2, y2, threshold):
+    return ((x1 - x2) ** 2 + (y1 - y2) ** 2) < threshold ** 2
+
 # Função de callback para o teclado
 def key_callback(window, key, scancode, action, mods):
-    global x1_posicao, y1_posicao, x2_posicao, y2_posicao, speed, keys_pressed
-    if action == glfw.PRESS:
-        keys_pressed.add(key)  # Adiciona a tecla pressionada ao conjunto
-    elif action == glfw.RELEASE:
-        if key in keys_pressed:
-            keys_pressed.remove(key)  # Remove a tecla liberada do conjunto
+    global keys_pressed, speed
+    if game_state == "jogando":
+        if action == glfw.PRESS:
+            keys_pressed.add(key)  # Adiciona a tecla pressionada ao conjunto
+            if key in [glfw.KEY_UP, glfw.KEY_DOWN, glfw.KEY_LEFT, glfw.KEY_RIGHT, glfw.KEY_W, glfw.KEY_S, glfw.KEY_A, glfw.KEY_D]:
+                speed = max_speed  # Define a velocidade máxima ao pressionar uma tecla
+        elif action == glfw.RELEASE:
+            if key in keys_pressed:
+                keys_pressed.remove(key)  # Remove a tecla liberada do conjunto
+            if len(keys_pressed) == 0:
+                speed = min_speed  # Define a velocidade mínima ao soltar todas as teclas
+
+# Função para atualizar as posições dos "carrinhos" e rastros
+def update_positions():
+    global x1_posicao, y1_posicao, x2_posicao, y2_posicao, keys_pressed, rastro_moto1, rastro_moto2, game_state, bombinha_visible, bombinha_timer
+
+    if game_state == "jogando":
+        step_size = speed  # Ajusta a velocidade conforme a tecla pressionada
+
+        # Verifica se as teclas estão pressionadas e atualiza as posições dos carrinhos
+        if glfw.KEY_UP in keys_pressed:
+            if y2_posicao + step_size <= top_limit:
+                y2_posicao += step_size
+        elif glfw.KEY_DOWN in keys_pressed:
+            if y2_posicao - step_size >= bottom_limit:
+                y2_posicao -= step_size
+        elif glfw.KEY_LEFT in keys_pressed:
+            if x2_posicao - step_size >= left_limit:
+                x2_posicao -= step_size
+        elif glfw.KEY_RIGHT in keys_pressed:
+            if x2_posicao + step_size <= right_limit:
+                x2_posicao += step_size
+        elif glfw.KEY_W in keys_pressed:
+            if y1_posicao + step_size <= top_limit:
+                y1_posicao += step_size
+        elif glfw.KEY_S in keys_pressed:
+            if y1_posicao - step_size >= bottom_limit:
+                y1_posicao -= step_size
+        elif glfw.KEY_A in keys_pressed:
+            if x1_posicao - step_size >= left_limit:
+                x1_posicao -= step_size
+        elif glfw.KEY_D in keys_pressed:
+            if x1_posicao + step_size <= right_limit:
+                x1_posicao += step_size
+
+        # Adiciona as posições atuais às listas de rastros
+        rastro_moto1.append((x1_posicao, y1_posicao))
+        rastro_moto2.append((x2_posicao, y2_posicao))
+
+        # Verifica colisão entre os carrinhos
+        if check_collision(x1_posicao, y1_posicao, x2_posicao, y2_posicao, 0.05):
+            game_state = "perdeu"
+            bombinha_visible = True
+            bombinha_timer = bombinha_delay  # Tempo de exibição da bombinha
+
+        # Atualiza o timer da bombinha
+        if bombinha_visible:
+            bombinha_timer -= 1
+            if bombinha_timer <= 0:
+                bombinha_visible = False
 
 # Função para desenhar um "carrinho"
 def draw_car(x, y, color):
@@ -67,104 +132,56 @@ def draw_car(x, y, color):
         glVertex2f(x_wheel, y_wheel)
     glEnd()
 
-# Função para desenhar a pista de corrida com curvas
-def draw_track():
-    # Cor cinza para a pista
-    glColor3f(0.3, 0.3, 0.3)
-    glBegin(GL_QUADS)
-    glVertex2f(left_limit, bottom_limit)
-    glVertex2f(right_limit, bottom_limit)
-    glVertex2f(right_limit, top_limit)
-    glVertex2f(left_limit, top_limit)
-    glEnd()
-
-    # Desenha a curva superior (esquerda)
-    glColor3f(0.3, 0.3, 0.3)
-    glBegin(GL_QUADS)
-    glVertex2f(left_limit, bottom_limit)
-    glVertex2f(left_limit + 0.2, bottom_limit)
-    glVertex2f(left_limit + 0.2, bottom_limit - 0.2)
-    glVertex2f(left_limit, bottom_limit - 0.2)
-    glEnd()
-
-    # Desenha a curva inferior (direita)
-    glBegin(GL_QUADS)
-    glVertex2f(right_limit - 0.2, bottom_limit)
-    glVertex2f(right_limit, bottom_limit)
-    glVertex2f(right_limit, bottom_limit - 0.2)
-    glVertex2f(right_limit - 0.2, bottom_limit - 0.2)
-    glEnd()
-
-    # Linha de chegada (cor branca) no final da pista
-    glLineWidth(3.0)  # Aumenta a espessura da linha
-    glColor3f(1.0, 1.0, 1.0)
-    glBegin(GL_LINES)
-    glVertex2f(left_limit, top_limit)  # Início da linha de chegada
-    glVertex2f(right_limit, top_limit)   # Fim da linha de chegada
-    glEnd()
-    glLineWidth(1.0)  # Restaura a espessura padrão
-
 # Função para desenhar na tela
 def draw():
-    global rastro_moto1, rastro_moto2
+    global rastro_moto1, rastro_moto2, bombinha_visible
     glClear(GL_COLOR_BUFFER_BIT)
-    glClearColor(0.2, 0.3,0.8, 1.0)  # Cor de fundo cinza
+    glClearColor(0.6, 0.9, 0.6, 1.0)  # Cor de fundo verde clara
     glLoadIdentity()
-    draw_track()  # Desenhar a pista de corrida
-    draw_car(x1_posicao, y1_posicao, (1.0, 0.0, 0.0))  # Primeiro "carrinho" em vermelho
-    draw_car(x2_posicao, y2_posicao, (0.0, 0.0, 1.0))  # Segundo "carrinho" em azul
 
-    # Desenhar os rastros
-    draw_rastro(rastro_moto1)
-    draw_rastro(rastro_moto2)
+    if game_state == "jogando":
+        draw_car(x1_posicao, y1_posicao, (1.0, 0.5, 0.5))  # Primeiro "carrinho" em rosa
+        draw_car(x2_posicao, y2_posicao, (0.0, 0.0, 1.0))  # Segundo "carrinho" em azul
+        # Desenhar os rastros
+        draw_rastro(rastro_moto1, (1.0, 0.5, 0.5))  # Rastro do primeiro "carrinho" em rosa
+        draw_rastro(rastro_moto2, (0.0, 0.0, 1.0))  # Rastro do segundo "carrinho" em azul
+    else:
+        draw_car(x1_posicao, y1_posicao, (1.0, 0.5, 0.5))  # Primeiro "carrinho" em rosa
+        draw_car(x2_posicao, y2_posicao, (0.0, 0.0, 1.0))  # Segundo "carrinho" em azul
+        # Desenha a mensagem de "Jogo Finalizado" na tela
+        draw_text("Jogo Finalizado!", -0.25, 0.0, 0.05, (1.0, 0.0, 0.0))
+
+    if bombinha_visible:
+        draw_bombinha()
 
     glfw.swap_buffers(window)
 
-# Função para atualizar as posições dos "carrinhos" e rastros
-def update_positions():
-    global x1_posicao, y1_posicao, x2_posicao, y2_posicao, keys_pressed
-
-    step_size = 0.03  # Reduzindo a velocidade
-
-    for key in keys_pressed:
-        if key == glfw.KEY_UP:
-            y2_posicao += speed if y2_posicao + speed <= top_limit else 0  # Move o segundo "carrinho" para cima
-        elif key == glfw.KEY_DOWN:
-            y2_posicao -= speed if y2_posicao - speed >= bottom_limit else 0  # Move o segundo "carrinho" para baixo
-        elif key == glfw.KEY_LEFT:
-            x2_posicao -= speed if x2_posicao - speed >= left_limit else 0  # Move o segundo "carrinho" para a esquerda
-        elif key == glfw.KEY_RIGHT:
-            x2_posicao += speed if x2_posicao + speed <= right_limit else 0  # Move o segundo "carrinho" para a direita
-        elif key == glfw.KEY_W:
-            y1_posicao += speed if y1_posicao + speed <= top_limit else 0  # Move o primeiro "carrinho" para cima
-        elif key == glfw.KEY_S:
-            y1_posicao -= speed if y1_posicao - speed >= bottom_limit else 0  # Move o primeiro "carrinho" para baixo
-        elif key == glfw.KEY_A:
-            x1_posicao -= speed if x1_posicao - speed >= left_limit else 0  # Move o primeiro "carrinho" para a esquerda
-        elif key == glfw.KEY_D:
-            x1_posicao += speed if x1_posicao + speed <= right_limit else 0  # Move o primeiro "carrinho" para a direita
-
-    # Adiciona a posição atual à lista de rastros
-    rastro_moto1.append((x1_posicao, y1_posicao))
-    rastro_moto2.append((x2_posicao, y2_posicao))
-
-    # Limita o tamanho do rastro
-    if len(rastro_moto1) > rastro_size:
-        rastro_moto1.pop(0)
-    if len(rastro_moto2) > rastro_size:
-        rastro_moto2.pop(0)
-
 # Função para desenhar o rastro
-def draw_rastro(rastro):
-    glColor3f(0.8, 0.8, 0.8)
+def draw_rastro(rastro, color):
+    glLineWidth(5.0)  # Aumenta a espessura do rastro
+    glColor3f(*color)  # Cor do rastro
     glBegin(GL_LINE_STRIP)
-    decay_rate = 1.0
-    for i, posicao in enumerate(rastro):
+    for posicao in rastro:
         glVertex2f(posicao[0], posicao[1])
-        # Aplica decaimento ao rastro
-        decay_rate -= rastro_decay_rate / rastro_size
-        glColor3f(0.8 * decay_rate, 0.8 * decay_rate, 0.8 * decay_rate)
     glEnd()
+    glLineWidth(1.0)  # Restaura a espessura padrão
+
+# Função para desenhar a bombinha
+def draw_bombinha():
+    glColor3f(0.0, 0.0, 0.0)  # Cor preta para a bombinha
+    glBegin(GL_POLYGON)
+    glVertex2f(-0.05, -0.05)
+    glVertex2f(0.05, -0.05)
+    glVertex2f(0.05, 0.05)
+    glVertex2f(-0.05, 0.05)
+    glEnd()
+
+# Função para desenhar texto na tela
+def draw_text(text, x, y, size, color):
+    glColor3f(*color)
+    glRasterPos2f(x, y)
+    for character in text:
+        glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, ord(character))
 
 # Função de callback para redimensionamento da janela
 def framebuffer_size_callback(window, width, height):
@@ -183,7 +200,7 @@ def framebuffer_size_callback(window, width, height):
 
 # Função principal
 def main():
-    global window
+    global window, x1_posicao, y1_posicao, x2_posicao, y2_posicao
     if not glfw.init():
         return
 
