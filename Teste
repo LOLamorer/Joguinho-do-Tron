@@ -12,8 +12,8 @@ x2_posicao = 0.5
 y2_posicao = 0.0
 
 window = None  # Variável global para a janela
-max_speed = 0.002  # Velocidade máxima dos carrinhos
-min_speed = 0.001  # Velocidade mínima dos carrinhos
+max_speed = 0.02  # Velocidade máxima dos carrinhos
+min_speed = 0.01  # Velocidade mínima dos carrinhos
 speed = min_speed  # Velocidade inicial dos carrinhos
 keys_pressed = set()  # Armazena as teclas pressionadas
 
@@ -36,50 +36,43 @@ def check_collision(x1, y1, x2, y2, threshold):
 
 # Função de callback para o teclado
 def key_callback(window, key, scancode, action, mods):
-    global keys_pressed, speed
+    global keys_pressed, speed, game_state
     if game_state == "jogando":
         if action == glfw.PRESS:
             keys_pressed.add(key)  # Adiciona a tecla pressionada ao conjunto
             if key in [glfw.KEY_UP, glfw.KEY_DOWN, glfw.KEY_LEFT, glfw.KEY_RIGHT, glfw.KEY_W, glfw.KEY_S, glfw.KEY_A, glfw.KEY_D]:
                 speed = max_speed  # Define a velocidade máxima ao pressionar uma tecla
         elif action == glfw.RELEASE:
-            if key in keys_pressed:
-                keys_pressed.remove(key)  # Remove a tecla liberada do conjunto
+            keys_pressed.discard(key)  # Remove a tecla liberada do conjunto
             if len(keys_pressed) == 0:
                 speed = min_speed  # Define a velocidade mínima ao soltar todas as teclas
 
 # Função para atualizar as posições dos "carrinhos" e rastros
 def update_positions():
-    global x1_posicao, y1_posicao, x2_posicao, y2_posicao, keys_pressed, rastro_moto1, rastro_moto2, game_state
+    global x1_posicao, y1_posicao, x2_posicao, y2_posicao, rastro_moto1, rastro_moto2, game_state
 
     if game_state == "jogando":
         step_size = speed  # Ajusta a velocidade conforme a tecla pressionada
 
-        # Verifica se as teclas estão pressionadas e atualiza as posições dos carrinhos
-        if glfw.KEY_UP in keys_pressed:
-            if y2_posicao + step_size <= top_limit:
-                y2_posicao += step_size
-        elif glfw.KEY_DOWN in keys_pressed:
-            if y2_posicao - step_size >= bottom_limit:
-                y2_posicao -= step_size
-        elif glfw.KEY_LEFT in keys_pressed:
-            if x2_posicao - step_size >= left_limit:
-                x2_posicao -= step_size
-        elif glfw.KEY_RIGHT in keys_pressed:
-            if x2_posicao + step_size <= right_limit:
-                x2_posicao += step_size
-        elif glfw.KEY_W in keys_pressed:
-            if y1_posicao + step_size <= top_limit:
-                y1_posicao += step_size
-        elif glfw.KEY_S in keys_pressed:
-            if y1_posicao - step_size >= bottom_limit:
-                y1_posicao -= step_size
-        elif glfw.KEY_A in keys_pressed:
-            if x1_posicao - step_size >= left_limit:
-                x1_posicao -= step_size
-        elif glfw.KEY_D in keys_pressed:
-            if x1_posicao + step_size <= right_limit:
-                x1_posicao += step_size
+        # Atualiza a posição do carrinho 2 (azul)
+        if glfw.KEY_UP in keys_pressed and y2_posicao + step_size <= top_limit:
+            y2_posicao += step_size
+        if glfw.KEY_DOWN in keys_pressed and y2_posicao - step_size >= bottom_limit:
+            y2_posicao -= step_size
+        if glfw.KEY_LEFT in keys_pressed and x2_posicao - step_size >= left_limit:
+            x2_posicao -= step_size
+        if glfw.KEY_RIGHT in keys_pressed and x2_posicao + step_size <= right_limit:
+            x2_posicao += step_size
+
+        # Atualiza a posição do carrinho 1 (rosa)
+        if glfw.KEY_W in keys_pressed and y1_posicao + step_size <= top_limit:
+            y1_posicao += step_size
+        if glfw.KEY_S in keys_pressed and y1_posicao - step_size >= bottom_limit:
+            y1_posicao -= step_size
+        if glfw.KEY_A in keys_pressed and x1_posicao - step_size >= left_limit:
+            x1_posicao -= step_size
+        if glfw.KEY_D in keys_pressed and x1_posicao + step_size <= right_limit:
+            x1_posicao += step_size
 
         # Adiciona as posições atuais às listas de rastros
         rastro_moto1.append((x1_posicao, y1_posicao))
@@ -87,9 +80,7 @@ def update_positions():
 
         # Verifica colisão entre os carrinhos
         if check_collision(x1_posicao, y1_posicao, x2_posicao, y2_posicao, 0.05):
-            print("Os carrinhos colidiram!")  # Mensagem de colisão no console
             game_state = "perdeu"
-            time.sleep(3)  # Pausa a execução por 3 segundos antes de continuar
 
 # Função para desenhar um "carrinho"
 def draw_car(x, y, color):
@@ -106,25 +97,18 @@ def draw_car(x, y, color):
 
     # Rodas
     glColor3f(0.0, 0.0, 0.0)  # Cor preta para as rodas
-    glBegin(GL_POLYGON)
-    for i in range(360):
-        angle = i * math.pi / 180
-        x_wheel = x - 0.04 + 0.02 * math.cos(angle)  # Posição x da roda dianteira
-        y_wheel = y - 0.02 + 0.02 * math.sin(angle)  # Posição y da roda dianteira
-        glVertex2f(x_wheel, y_wheel)
-    glEnd()
-
-    glBegin(GL_POLYGON)
-    for i in range(360):
-        angle = i * math.pi / 180
-        x_wheel = x + 0.04 + 0.02 * math.cos(angle)  # Posição x da roda traseira
-        y_wheel = y - 0.02 + 0.02 * math.sin(angle)  # Posição y da roda traseira
-        glVertex2f(x_wheel, y_wheel)
-    glEnd()
+    for dx in [-0.04, 0.04]:
+        glBegin(GL_POLYGON)
+        for i in range(360):
+            angle = i * math.pi / 180
+            x_wheel = x + dx + 0.02 * math.cos(angle)
+            y_wheel = y - 0.02 + 0.02 * math.sin(angle)
+            glVertex2f(x_wheel, y_wheel)
+        glEnd()
 
 # Função para desenhar na tela
 def draw():
-    global rastro_moto1, rastro_moto2
+    global rastro_moto1, rastro_moto2, game_state
 
     glClear(GL_COLOR_BUFFER_BIT)
     glClearColor(0.6, 0.9, 0.6, 1.0)  # Cor de fundo verde clara
@@ -137,6 +121,9 @@ def draw():
     draw_rastro(rastro_moto1, (1.0, 0.5, 0.5))  # Rastro do primeiro "carrinho" em rosa
     draw_rastro(rastro_moto2, (0.0, 0.0, 1.0))  # Rastro do segundo "carrinho" em azul
 
+    if game_state == "perdeu":
+        draw_game_over()
+
     glfw.swap_buffers(window)
 
 # Função para desenhar o rastro
@@ -148,6 +135,33 @@ def draw_rastro(rastro, color):
         glVertex2f(posicao[0], posicao[1])
     glEnd()
     glLineWidth(1.0)  # Restaura a espessura padrão
+
+# Função para desenhar a mensagem de fim de jogo e os botões
+def draw_game_over():
+    glColor3f(1.0, 0.0, 0.0)  # Cor vermelha para a mensagem
+    glRasterPos2f(-0.2, 0.0)
+    for char in "Fim de Jogo":
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, ord(char))
+
+    # Desenhar botões
+    draw_button(-0.3, -0.2, 0.3, -0.1, "Novo Jogo")
+    draw_button(-0.3, -0.4, 0.3, -0.3, "Sair")
+
+# Função para desenhar um botão
+def draw_button(x1, y1, x2, y2, text):
+    glColor3f(0.0, 0.0, 0.0)  # Cor preta para o botão
+    glBegin(GL_QUADS)
+    glVertex2f(x1, y1)
+    glVertex2f(x2, y1)
+    glVertex2f(x2, y2)
+    glVertex2f(x1, y2)
+    glEnd()
+
+    glColor3f(1.0, 1.0, 1.0)  # Cor branca para o texto
+    text_width = glutBitmapLength(GLUT_BITMAP_HELVETICA_12, text.encode('utf-8')) / 2
+    glRasterPos2f((x1 + x2) / 2 - text_width / 800, (y1 + y2) / 2 - 0.01)
+    for char in text:
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, ord(char))
 
 # Função de callback para redimensionamento da janela
 def framebuffer_size_callback(window, width, height):
@@ -164,19 +178,47 @@ def framebuffer_size_callback(window, width, height):
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
 
+# Função de callback para o mouse
+def mouse_button_callback(window, button, action, mods):
+    global game_state
+    if game_state == "perdeu" and action == glfw.PRESS:
+        xpos, ypos = glfw.get_cursor_pos(window)
+        width, height = glfw.get_window_size(window)
+        xpos = (xpos / width) * 2 - 1  # Converte a posição do mouse para o sistema de coordenadas da janela OpenGL
+        ypos = 1 - (ypos / height) * 2
+
+        # Verifica se o botão "Novo Jogo" foi clicado
+        if -0.3 < xpos < 0.3 and -0.2 < ypos < -0.1:
+            reset_game()
+        # Verifica se o botão "Sair" foi clicado
+        elif -0.3 < xpos < 0.3 and -0.4 < ypos < -0.3:
+            glfw.set_window_should_close(window, True)
+
+# Função para reiniciar o jogo
+def reset_game():
+    global x1_posicao, y1_posicao, x2_posicao, y2_posicao, rastro_moto1, rastro_moto2, game_state, speed, keys_pressed
+    x1_posicao, y1_posicao = -0.5, 0.0
+    x2_posicao, y2_posicao = 0.5, 0.0
+    rastro_moto1.clear()
+    rastro_moto2.clear()
+    game_state = "jogando"
+    speed = min_speed
+    keys_pressed.clear()
+
 # Função principal
 def main():
     global window, x1_posicao, y1_posicao, x2_posicao, y2_posicao
     if not glfw.init():
         return
 
-    window = glfw.create_window(800, 600, "Teclado", None, None)
+    window = glfw.create_window(800, 600, "Carrinhos", None, None)
     if not window:
         glfw.terminate()
         return
 
     glfw.make_context_current(window)
     glfw.set_key_callback(window, key_callback)
+    glfw.set_mouse_button_callback(window, mouse_button_callback)
     glfw.set_framebuffer_size_callback(window, framebuffer_size_callback)
 
     glMatrixMode(GL_PROJECTION)
