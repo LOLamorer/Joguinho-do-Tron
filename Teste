@@ -3,6 +3,7 @@ import math
 from OpenGL.GL import *
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
+import time
 
 # Variáveis globais para as posições dos "carrinhos"
 x1_posicao = -0.5
@@ -27,12 +28,7 @@ bottom_limit = -1.0
 top_limit = 1.0
 
 # Variável para controlar o estado do jogo
-game_state = "jogando" 
-
-# Variável para controlar a bombinha
-bombinha_visible = False
-bombinha_timer = 120  # Tempo de espera antes de mostrar a bombinha
-bombinha_delay = 120  # Tempo que a bombinha fica visível
+game_state = "jogando"
 
 # Função para verificar a colisão entre dois carrinhos
 def check_collision(x1, y1, x2, y2, threshold):
@@ -54,7 +50,7 @@ def key_callback(window, key, scancode, action, mods):
 
 # Função para atualizar as posições dos "carrinhos" e rastros
 def update_positions():
-    global x1_posicao, y1_posicao, x2_posicao, y2_posicao, keys_pressed, rastro_moto1, rastro_moto2, game_state, bombinha_visible, bombinha_timer
+    global x1_posicao, y1_posicao, x2_posicao, y2_posicao, keys_pressed, rastro_moto1, rastro_moto2, game_state
 
     if game_state == "jogando":
         step_size = speed  # Ajusta a velocidade conforme a tecla pressionada
@@ -91,15 +87,9 @@ def update_positions():
 
         # Verifica colisão entre os carrinhos
         if check_collision(x1_posicao, y1_posicao, x2_posicao, y2_posicao, 0.05):
+            print("Os carrinhos colidiram!")  # Mensagem de colisão no console
             game_state = "perdeu"
-            bombinha_visible = True
-            bombinha_timer = bombinha_delay  # Tempo de exibição da bombinha
-
-        # Atualiza o timer da bombinha
-        if bombinha_visible:
-            bombinha_timer -= 1
-            if bombinha_timer <= 0:
-                bombinha_visible = False
+            time.sleep(3)  # Pausa a execução por 3 segundos antes de continuar
 
 # Função para desenhar um "carrinho"
 def draw_car(x, y, color):
@@ -134,25 +124,18 @@ def draw_car(x, y, color):
 
 # Função para desenhar na tela
 def draw():
-    global rastro_moto1, rastro_moto2, bombinha_visible
+    global rastro_moto1, rastro_moto2
+
     glClear(GL_COLOR_BUFFER_BIT)
     glClearColor(0.6, 0.9, 0.6, 1.0)  # Cor de fundo verde clara
     glLoadIdentity()
 
-    if game_state == "jogando":
-        draw_car(x1_posicao, y1_posicao, (1.0, 0.5, 0.5))  # Primeiro "carrinho" em rosa
-        draw_car(x2_posicao, y2_posicao, (0.0, 0.0, 1.0))  # Segundo "carrinho" em azul
-        # Desenhar os rastros
-        draw_rastro(rastro_moto1, (1.0, 0.5, 0.5))  # Rastro do primeiro "carrinho" em rosa
-        draw_rastro(rastro_moto2, (0.0, 0.0, 1.0))  # Rastro do segundo "carrinho" em azul
-    else:
-        draw_car(x1_posicao, y1_posicao, (1.0, 0.5, 0.5))  # Primeiro "carrinho" em rosa
-        draw_car(x2_posicao, y2_posicao, (0.0, 0.0, 1.0))  # Segundo "carrinho" em azul
-        # Desenha a mensagem de "Jogo Finalizado" na tela
-        draw_text("Jogo Finalizado!", -0.25, 0.0, 0.05, (1.0, 0.0, 0.0))
+    draw_car(x1_posicao, y1_posicao, (1.0, 0.5, 0.5))  # Primeiro "carrinho" em rosa
+    draw_car(x2_posicao, y2_posicao, (0.0, 0.0, 1.0))  # Segundo "carrinho" em azul
 
-    if bombinha_visible:
-        draw_bombinha()
+    # Desenhar os rastros
+    draw_rastro(rastro_moto1, (1.0, 0.5, 0.5))  # Rastro do primeiro "carrinho" em rosa
+    draw_rastro(rastro_moto2, (0.0, 0.0, 1.0))  # Rastro do segundo "carrinho" em azul
 
     glfw.swap_buffers(window)
 
@@ -165,23 +148,6 @@ def draw_rastro(rastro, color):
         glVertex2f(posicao[0], posicao[1])
     glEnd()
     glLineWidth(1.0)  # Restaura a espessura padrão
-
-# Função para desenhar a bombinha
-def draw_bombinha():
-    glColor3f(0.0, 0.0, 0.0)  # Cor preta para a bombinha
-    glBegin(GL_POLYGON)
-    glVertex2f(-0.05, -0.05)
-    glVertex2f(0.05, -0.05)
-    glVertex2f(0.05, 0.05)
-    glVertex2f(-0.05, 0.05)
-    glEnd()
-
-# Função para desenhar texto na tela
-def draw_text(text, x, y, size, color):
-    glColor3f(*color)
-    glRasterPos2f(x, y)
-    for character in text:
-        glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, ord(character))
 
 # Função de callback para redimensionamento da janela
 def framebuffer_size_callback(window, width, height):
@@ -222,7 +188,7 @@ def main():
     while not glfw.window_should_close(window):
         glfw.poll_events()
         update_positions()  # Atualiza as posições das motos
-        draw()
+        draw()  # Desenha na tela
 
     glfw.terminate()
 
