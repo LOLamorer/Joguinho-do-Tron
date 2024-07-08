@@ -3,7 +3,6 @@ import math
 from OpenGL.GL import *
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
-import time
 
 # Variáveis globais para as posições dos "carrinhos"
 x1_posicao = -0.5
@@ -82,6 +81,16 @@ def update_positions():
         if check_collision(x1_posicao, y1_posicao, x2_posicao, y2_posicao, 0.05):
             game_state = "perdeu"
 
+        # Verifica se o carrinho 1 (rosa) bateu nos limites
+        if (x1_posicao - 0.05 < left_limit or x1_posicao + 0.05 > right_limit or
+            y1_posicao - 0.02 < bottom_limit or y1_posicao + 0.05 > top_limit):
+            game_state = "perdeu"
+
+        # Verifica se o carrinho 2 (azul) bateu nos limites
+        if (x2_posicao - 0.05 < left_limit or x2_posicao + 0.05 > right_limit or
+            y2_posicao - 0.02 < bottom_limit or y2_posicao + 0.05 > top_limit):
+            game_state = "perdeu"
+
 # Função para desenhar um "carrinho"
 def draw_car(x, y, color):
     # Corpo do carro
@@ -157,80 +166,71 @@ def draw_button(x1, y1, x2, y2, text):
     glVertex2f(x1, y2)
     glEnd()
 
+    # Desenhar o texto do botão
     glColor3f(1.0, 1.0, 1.0)  # Cor branca para o texto
-    text_width = glutBitmapLength(GLUT_BITMAP_HELVETICA_12, text.encode('utf-8')) / 2
-    glRasterPos2f((x1 + x2) / 2 - text_width / 800, (y1 + y2) / 2 - 0.01)
+    glRasterPos2f(x1 + 0.05, y1 + 0.03)
     for char in text:
-        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, ord(char))
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, ord(char))
+
+# Função para verificar cliques do mouse nos botões
+def mouse_button_callback(window, button, action, mods):
+    global game_state, x1_posicao, y1_posicao, x2_posicao, y2_posicao, rastro_moto1, rastro_moto2
+
+    if action == glfw.PRESS and button == glfw.MOUSE_BUTTON_LEFT:
+        x, y = glfw.get_cursor_pos(window)
+        width, height = glfw.get_window_size(window)
+        norm_x = (x / width) * 2 - 1  # Normaliza para -1 a 1
+        norm_y = 1 - (y / height) * 2  # Normaliza para -1 a 1 (invertido)
+
+        if game_state == "perdeu":
+            # Verifica se o clique foi no botão "Novo Jogo"
+            if -0.3 <= norm_x <= 0.3 and -0.2 <= norm_y <= -0.1:
+                game_state = "jogando"
+                x1_posicao = -0.5
+                y1_posicao = 0.0
+                x2_posicao = 0.5
+                y2_posicao = 0.0
+                rastro_moto1 = []
+                rastro_moto2 = []
+            # Verifica se o clique foi no botão "Sair"
+            elif -0.3 <= norm_x <= 0.3 and -0.4 <= norm_y <= -0.3:
+                glfw.set_window_should_close(window, True)
 
 # Função de callback para redimensionamento da janela
 def framebuffer_size_callback(window, width, height):
-    global left_limit, right_limit, bottom_limit, top_limit
     glViewport(0, 0, width, height)
-    aspect_ratio = width / height
-    left_limit = -aspect_ratio
-    right_limit = aspect_ratio
-    bottom_limit = -1.0
-    top_limit = 1.0
-    glMatrixMode(GL_PROJECTION)
-    glLoadIdentity()
-    gluOrtho2D(left_limit, right_limit, bottom_limit, top_limit)
-    glMatrixMode(GL_MODELVIEW)
-    glLoadIdentity()
-
-# Função de callback para o mouse
-def mouse_button_callback(window, button, action, mods):
-    global game_state
-    if game_state == "perdeu" and action == glfw.PRESS:
-        xpos, ypos = glfw.get_cursor_pos(window)
-        width, height = glfw.get_window_size(window)
-        xpos = (xpos / width) * 2 - 1  # Converte a posição do mouse para o sistema de coordenadas da janela OpenGL
-        ypos = 1 - (ypos / height) * 2
-
-        # Verifica se o botão "Novo Jogo" foi clicado
-        if -0.3 < xpos < 0.3 and -0.2 < ypos < -0.1:
-            reset_game()
-        # Verifica se o botão "Sair" foi clicado
-        elif -0.3 < xpos < 0.3 and -0.4 < ypos < -0.3:
-            glfw.set_window_should_close(window, True)
-
-# Função para reiniciar o jogo
-def reset_game():
-    global x1_posicao, y1_posicao, x2_posicao, y2_posicao, rastro_moto1, rastro_moto2, game_state, speed, keys_pressed
-    x1_posicao, y1_posicao = -0.5, 0.0
-    x2_posicao, y2_posicao = 0.5, 0.0
-    rastro_moto1.clear()
-    rastro_moto2.clear()
-    game_state = "jogando"
-    speed = min_speed
-    keys_pressed.clear()
 
 # Função principal
 def main():
-    global window, x1_posicao, y1_posicao, x2_posicao, y2_posicao
+    global window
+
     if not glfw.init():
         return
 
-    window = glfw.create_window(800, 600, "Carrinhos", None, None)
+    window = glfw.create_window(800, 600, "Corrida de Carrinhos", None, None)
+
     if not window:
         glfw.terminate()
         return
 
     glfw.make_context_current(window)
+
+    # Configurações iniciais do OpenGL
+    glMatrixMode(GL_PROJECTION)
+    glLoadIdentity()
+    gluOrtho2D(-1.0, 1.0, -1.0, 1.0)
+    glMatrixMode(GL_MODELVIEW)
+
+    # Configurações de callbacks
     glfw.set_key_callback(window, key_callback)
     glfw.set_mouse_button_callback(window, mouse_button_callback)
     glfw.set_framebuffer_size_callback(window, framebuffer_size_callback)
 
-    glMatrixMode(GL_PROJECTION)
-    glLoadIdentity()
-    gluOrtho2D(left_limit, right_limit, bottom_limit, top_limit)
-    glMatrixMode(GL_MODELVIEW)
-    glLoadIdentity()
-
+    # Loop principal
     while not glfw.window_should_close(window):
+        update_positions()
+        draw()
         glfw.poll_events()
-        update_positions()  # Atualiza as posições das motos
-        draw()  # Desenha na tela
 
     glfw.terminate()
 
