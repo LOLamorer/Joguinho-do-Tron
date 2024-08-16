@@ -1,0 +1,101 @@
+import pygame
+from pygame.locals import DOUBLEBUF, OPENGL, KEYDOWN
+from OpenGL.GL import *
+from OpenGL.GLU import *
+
+def init_game():
+    pygame.init()
+    display = (800, 600)
+    pygame.display.set_mode(display, DOUBLEBUF | OPENGL)
+    gluPerspective(45, (display[0] / display[1]), 0.1, 50.0)
+    glTranslatef(0.0, 0.0, -5)
+
+def draw_cube(x, y, color):
+    glBegin(GL_QUADS)
+
+    #Parte da FRente
+    glColor3f(*color)  
+    glVertex3f(x - 0.1, y - 0.1, 0.1)
+    glVertex3f(x + 0.1, y - 0.1, 0.1)
+    glVertex3f(x + 0.1, y + 0.1, 0.1)
+    glVertex3f(x - 0.1, y + 0.1, 0.1)
+
+    #Parte de Traz
+    glColor3f(*color)  
+    glVertex3f(x - 0.1, y - 0.1, -0.1)
+    glVertex3f(x + 0.1, y - 0.1, -0.1)
+    glVertex3f(x + 0.1, y + 0.1, -0.1)
+    glVertex3f(x - 0.1, y + 0.1, -0.1)
+
+    #L Direito
+    glColor3f(*color)  
+    glVertex3f(x + 0.1, y - 0.1, -0.1)
+    glVertex3f(x + 0.1, y - 0.1, 0.1)
+    glVertex3f(x + 0.1, y + 0.1, 0.1)
+    glVertex3f(x + 0.1, y + 0.1, -0.1)
+
+    #L Esquerdo
+    glColor3f(*color)  
+    glVertex3f(x - 0.1, y - 0.1, -0.1)
+    glVertex3f(x - 0.1, y - 0.1, 0.1)
+    glVertex3f(x - 0.1, y + 0.1, 0.1)
+    glVertex3f(x - 0.1, y + 0.1, -0.1)
+
+    #Cima
+    glColor3f(*color)  
+    glVertex3f(x - 0.1, y + 0.1, -0.1)
+    glVertex3f(x + 0.1, y + 0.1, -0.1)
+    glVertex3f(x + 0.1, y + 0.1, 0.1)
+    glVertex3f(x - 0.1, y + 0.1, 0.1)
+
+    #inferiro
+    glColor3f(*color)  
+    glVertex3f(x - 0.1, y - 0.1, -0.1)
+    glVertex3f(x + 0.1, y - 0.1, -0.1)
+    glVertex3f(x + 0.1, y - 0.1, 0.1)
+    glVertex3f(x - 0.1, y - 0.1, 0.1)
+
+    glEnd()
+
+def game_loop():
+    square1_x, square1_y = -0.5, 0
+    square2_x, square2_y = 0.5, 0
+    speed = 0.05
+
+    game_over = False
+    while not game_over:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                game_over = True
+            if event.type == KEYDOWN:
+                # Movimento do quadrado 1 
+                if event.key == pygame.K_LEFT:
+                    square1_x -= speed
+                if event.key == pygame.K_RIGHT:
+                    square1_x += speed
+                if event.key == pygame.K_UP:
+                    square1_y += speed
+                if event.key == pygame.K_DOWN:
+                    square1_y -= speed
+
+                # Movimento do quadrado 2 
+                if event.key == pygame.K_a:
+                    square2_x -= speed
+                if event.key == pygame.K_d:
+                    square2_x += speed
+                if event.key == pygame.K_w:
+                    square2_y += speed
+                if event.key == pygame.K_s:
+                    square2_y -= speed
+
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
+        draw_cube(square1_x, square1_y, (1, 0, 0))  # Cor vermelho
+        draw_cube(square2_x, square2_y, (0, 0, 1))  # Cor azul
+
+        pygame.display.flip()
+        pygame.time.wait(10)
+
+init_game()
+game_loop()
+pygame.quit()
